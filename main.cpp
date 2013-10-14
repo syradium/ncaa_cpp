@@ -341,20 +341,6 @@ double CN(const matrix<double>& t, const int& imax)
     return 0.5 - s2 * 0.318309886183790671;
 }
 
-double CN2(const matrix<double>& t, const int& imax)
-{
-    double s1 = 0;
-    double s2 = 0;
-    for (int i = 0; i <= imax; ++i)
-    {
-        s1 += t(0, i);
-        s2 += t(0, i) * std::atan(t(1, i));
-    }
-    std::cout << "sum(s1): " << s1 << std::endl;
-    return 0.5 - s2 * 0.318309886183790671;
-}
-
-
 double CalculateEnergy(const matrix<double>& t, const int& imax)
 {
     double s1 = 0;
