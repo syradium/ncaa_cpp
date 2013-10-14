@@ -549,8 +549,6 @@ int main(int argc, char* argv[])
     //Magnetic field
     double dh = 0;
     
-    double magneticField = 0;
-
     try 
     {
         std::ifstream hparams_file("hoping.txt");
