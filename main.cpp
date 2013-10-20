@@ -449,9 +449,9 @@ bool SConsist(int i, const dvector& tAngle, const dvector& pAngle, dvector& M, d
     return itr == 1;
 }
 
-void SConsistThreaded(int i, const std::pair< dvector, dvector >& angles, /*const dvector& tAngle, const dvector& pAngle, */dvector& M, dvector& N, const dvector& E0, const dvector& U0, const dmatrix& hopingIntegrals, dvector& E, bool& isConsist)
+void SConsistThreaded(int i, const std::pair< dvector, dvector >& angles, dvector& M, dvector& N, const dvector& E0, const dvector& U0, const dmatrix& hopingIntegrals, dvector& E, bool& isConsist)
 {
-    double magneticField = 0.08;
+    double magneticField = 0.3;
     //Saving magnetic moments for each atom
     dvector M1(M);
     //Saving number of d-electrons on each atom
@@ -529,158 +529,8 @@ void SConsistThreaded(int i, const std::pair< dvector, dvector >& angles, /*cons
     isConsist &= (itr == 1);
 }
 
-int main(int argc, char* argv[])
+void correctErrors( dmatrix& results )
 {
-    std::cout << std::setprecision(16);
-    //Hoping itegrals between atoms
-    dmatrix hoping_integrals;
-    //Position of non-perturbed d-level with respect to the Fermi energy for all atoms
-    std::vector<double> E0;
-    //Coulomb repulsion energy for all atoms
-    std::vector<double> U0;
-    //initial number of d-electrons
-    std::vector<double> ElectronsNumber;
-    //initial magnenic moments
-    std::vector<double> MagneticMoments;
-    //Theta angles for atoms
-    std::vector<double> thetaAngles;
-    //Phi angle for atoms
-    std::vector<double> phiAngles;
-    //Magnetic field
-    double dh = 0;
-    
-    try 
-    {
-        std::ifstream hparams_file("hoping.txt");
-        std::string buf;
-        while (std::getline(hparams_file, buf))
-        {
-            std::istringstream line(buf);
-            hoping_integrals.push_back(std::vector<double>());
-            std::copy(std::istream_iterator<double>(line), std::istream_iterator<double>(), std::back_inserter(hoping_integrals.back()));
-        }
-        //Reading all necesary params from the text file
-        std::ifstream init_file("InitFile.txt");
-
-        GetParam(init_file, E0);
-        GetParam(init_file, U0);
-        GetParam(init_file, ElectronsNumber);
-        GetParam(init_file, MagneticMoments);
-        GetParam(init_file, thetaAngles);
-        GetParam(init_file, phiAngles);
-              
-        std::vector< std::vector<double> > results;
-        double step             = 0.1;
-        double theta2Begin      = 0; //0.6;
-        double theta2End        = 2 * 3.14;
-        double theta3Begin      = 0;//0.6000;
-        double theta3End        = 2 * 3.14; //0.6000;
-        
-        for( double theta2 = theta2Begin; theta2 <= theta2End; theta2 += step )
-        {
-            std::vector<double> bufResults;
-            for( double theta3 = theta3Begin; theta3 <= theta3End;  theta3 += step )
-            {
-                try
-                {
-                    //Energy
-                    std::vector<double> Energy(L, 0); 
-
-                    std::vector<double> N(ElectronsNumber);
-                    //initial magnenic moments
-                    std::vector<double> M(MagneticMoments);
-
-                    thetaAngles[0] = 0;
-                    thetaAngles[1] = theta2;
-                    thetaAngles[2] = theta3;
-
-                    bool isConsist = true;
-                    unsigned int iterations = 0;
-
-                    std::cout << "#" << theta2 << " " << theta3 << std::endl;
-
-  /*                  
-                    do
-                    {
-                        isConsist = true;
-                        for (int i = 0; i < L; ++i)
-                            isConsist &= SConsist(i, thetaAngles, phiAngles, M, N, E0, U0, hoping_integrals, Energy);
-                        if( ++iterations == 10 )
-                                throw "#Infinite consist cluster loop.";    
-                    }
-                    while (!isConsist);
-*/                  
-                    do
-                    {
-                            int j = 0;
-                            isConsist = true;
-                            while( j < L )
-                            {	  
-                                    boost::thread_group threads;
-                                    for ( int i = 0; i < CORE_COUNT && j < L; ++i, ++j )
-                                            threads.add_thread( new boost::thread( &SConsistThreaded, j,  std::make_pair(thetaAngles, phiAngles), boost::ref(M), boost::ref(N), E0, U0, hoping_integrals, boost::ref(Energy), boost::ref(isConsist)  ) );
-                                    threads.join_all();
-                                    if( interrupt == true )
-                                    {
-                                        interrupt = false;
-                                        throw "#Infinite selfconsistconsist procedure.";  
-                                    }
-                            }
-                            if( ++iterations == 10 )
-                                throw "#Infinite consist cluster loop.";    
-
-                    } while (!isConsist);
-
-                    double energy = 0;
-                    for( int i = 0; i < Energy.size(); ++i)
-                        energy += Energy[i];
-                    bufResults.push_back( energy );
-                    
-/*                    std::cout << "#Number of d-electrons: ";
-                    for (int i = 0; i < N.size(); ++i)
-                        std::cout << 5 * N[i] << " ";
-                    std::cout << std::endl;                    
-
-                    std::cout << "#Magnetic monents: ";
-                    for (int i = 0; i < M.size(); ++i)
-                        std::cout << 5 * M[i] << " ";
-                    std::cout << std::endl;                    
-*/
-                }
-                catch (const char* msg)
-                {
-                    // std::cout << "#No solution: " << msg <<  std::endl;
-                    bufResults.push_back(-1);
-                    continue;
-                }
-                catch( boost::thread_interrupted const& e )
-                {
-                    // std::cout << "#No solution" <<  std::endl;
-                    bufResults.push_back(-1);
-                    continue;                    
-                }
-                
-                /*		do
-                               {
-                                       int j = 0;
-                                       isConsist = true;
-                                       while( j < L )
-                                       {	  
-                                               boost::thread_group threads;
-                                               for ( int i = 0; i < CORE_COUNT && j < L; ++i, ++j )
-                                               {	
-                                                       threads.add_thread( new boost::thread( &SConsist, j, t, p, boost::ref(M), boost::ref(N), E0, U0, hoping_integrals, boost::ref(isConsist)  ) );
-                                                       std::cout << "Thread launched" << std::endl;	
-                                               }
-                                               threads.join_all();
-                                               std::cout << "Block end" << std::endl;
-                                       }
-                               } while (!isConsist);
-                */
-            }
-            results.push_back( bufResults );
-        }
-        
         for( int i = 0; i < results.size(); ++i )
         {
             std::vector< int > badDots;
@@ -753,15 +603,170 @@ int main(int argc, char* argv[])
                     results[i][j] = correction / numCorrections;
                 }
             }
-                
-        }
+        }    
+}
 
+int main(int argc, char* argv[])
+{
+    std::cout << std::setprecision(16);
+    //Hoping itegrals between atoms
+    dmatrix hoping_integrals;
+    //Position of non-perturbed d-level with respect to the Fermi energy for all atoms
+    std::vector<double> E0;
+    //Coulomb repulsion energy for all atoms
+    std::vector<double> U0;
+    //initial number of d-electrons
+    std::vector<double> ElectronsNumber;
+    //initial magnenic moments
+    std::vector<double> MagneticMoments;
+    //Theta angles for atoms
+    std::vector<double> thetaAngles;
+    //Phi angle for atoms
+    std::vector<double> phiAngles;
+    //Magnetic field
+    double dh = 0;
+    
+    try 
+    {
+        std::ifstream hparams_file("hoping.txt");
+        std::string buf;
+        while (std::getline(hparams_file, buf))
+        {
+            std::istringstream line(buf);
+            hoping_integrals.push_back(std::vector<double>());
+            std::copy(std::istream_iterator<double>(line), std::istream_iterator<double>(), std::back_inserter(hoping_integrals.back()));
+        }
+        //Reading all necesary params from the text file
+        std::ifstream init_file("InitFile.txt");
+
+        GetParam(init_file, E0);
+        GetParam(init_file, U0);
+        GetParam(init_file, ElectronsNumber);
+        GetParam(init_file, MagneticMoments);
+        GetParam(init_file, thetaAngles);
+        GetParam(init_file, phiAngles);
+              
+        std::vector< std::vector<double> > results;
+        double step             = 0.1;
+        double theta2Begin      = 0; //0.6;
+        double theta2End        = 2 * 3.14;
+        double theta3Begin      = 0;//0.6000;
+        double theta3End        = 2 * 3.14; //0.6000;
         
+        for( double theta2 = theta2Begin; theta2 <= theta2End; theta2 += step )
+        {
+            std::vector<double> bufResults;
+            for( double theta3 = theta3Begin; theta3 <= theta3End;  theta3 += step )
+            {
+                try
+                {
+                    //Energy
+                    std::vector<double> Energy(L, 0); 
+
+                    std::vector<double> N(ElectronsNumber);
+                    //initial magnenic moments
+                    std::vector<double> M(MagneticMoments);
+
+                    thetaAngles[0] = 0;
+                    thetaAngles[1] = theta2;
+                    thetaAngles[2] = theta3;
+
+                    bool isConsist = true;
+                    unsigned int iterations = 0;
+
+                    std::cout << "#" << theta2 << " " << theta3 << std::endl;
+  /*                  
+                    do
+                    {
+                        isConsist = true;
+                        for (int i = 0; i < L; ++i)
+                            isConsist &= SConsist(i, thetaAngles, phiAngles, M, N, E0, U0, hoping_integrals, Energy);
+                        if( ++iterations == 10 )
+                                throw "#Infinite consist cluster loop.";    
+                    }
+                    while (!isConsist);
+*/                  
+                    do
+                    {
+                            int j = 0;
+                            isConsist = true;
+                            while( j < L )
+                            {	  
+                                    boost::thread_group threads;
+                                    for ( int i = 0; i < CORE_COUNT && j < L; ++i, ++j )
+                                            threads.add_thread( new boost::thread( &SConsistThreaded, j,  std::make_pair(thetaAngles, phiAngles), boost::ref(M), boost::ref(N), E0, U0, hoping_integrals, boost::ref(Energy), boost::ref(isConsist)  ) );
+                                    threads.join_all();
+                                    if( interrupt == true )
+                                    {
+                                        interrupt = false;
+                                        throw "#Infinite selfconsistconsist procedure.";  
+                                    }
+                            }
+                            if( ++iterations == 10 )
+                                throw "#Infinite consist cluster loop.";    
+
+                    } while (!isConsist);
+
+                    double energy = 0;
+                    for( int i = 0; i < Energy.size(); ++i)
+                        energy += Energy[i];
+                    bufResults.push_back( energy );
+                    
+                    std::cout << "#Number of d-electrons: ";
+                    for (int i = 0; i < N.size(); ++i)
+                        std::cout << 5 * N[i] << " ";
+                    std::cout << std::endl;                    
+ /*
+                    std::cout << "#Magnetic monents: ";
+                    for (int i = 0; i < M.size(); ++i)
+                        std::cout << 5 * M[i] << " ";
+                    std::cout << std::endl;                    
+ */
+                }
+                catch (const char* msg)
+                {
+                    // std::cout << "#No solution: " << msg <<  std::endl;
+                    bufResults.push_back(-1);
+                    continue;
+                }
+                catch( boost::thread_interrupted const& e )
+                {
+                    // std::cout << "#No solution" <<  std::endl;
+                    bufResults.push_back(-1);
+                    continue;                    
+                }
+                
+                /*		do
+                               {
+                                       int j = 0;
+                                       isConsist = true;
+                                       while( j < L )
+                                       {	  
+                                               boost::thread_group threads;
+                                               for ( int i = 0; i < CORE_COUNT && j < L; ++i, ++j )
+                                               {	
+                                                       threads.add_thread( new boost::thread( &SConsist, j, t, p, boost::ref(M), boost::ref(N), E0, U0, hoping_integrals, boost::ref(isConsist)  ) );
+                                                       std::cout << "Thread launched" << std::endl;	
+                                               }
+                                               threads.join_all();
+                                               std::cout << "Block end" << std::endl;
+                                       }
+                               } while (!isConsist);
+                */
+            }
+            results.push_back( bufResults );
+        }
+        
+        //Approximates the point where selfconsistent result was not found
+        correctErrors(results);
+ 
+        std::ofstream logFile;
+        logFile.open( "temp.txt", std::ofstream::out | std::ofstream::trunc );
         for( int i = 0; i < results.size(); ++i )
         {
             for( int j = 0; j < results.size(); ++j )
-                std::cout << results[i][j] << " ";
-            std::cout << std::endl;
+                logFile << results[i][j] << " ";
+            logFile <<std::endl;
         }
     }
     catch (std::exception& exp)
