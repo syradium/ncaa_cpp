@@ -1,0 +1,7 @@
+.dep.inc
+.grive
+.idea/
+.metadata/
+CMakeLists.txt
+assets/
+cmake_install.cmake

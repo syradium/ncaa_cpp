@@ -19,9 +19,9 @@ std::pair< dvector, dvector > ThreeDiag(const hermitian_matrix<std::complex<doub
 	vector< std::complex<double> > y1(2 * L, 0);
 	vector< std::complex<double> > y(2 * L, 0);
 	//Subdiagonal coefficients of matrix
-	std::vector< std::complex<double> > a(2 * L, 0);
+	vector< std::complex<double> > a(2 * L, 0);
 	//Diagonal coefficiencrs of matrix
-	std::vector< std::complex<double> > b(2 * L - 1, 0);
+	vector< std::complex<double> > b(2 * L - 1, 0);
 	/*
 	   p              q
 	   First basis vector. y0 = ( 0, ..., 0, k, 0, ...., 0, m, 0 ... ) 
@@ -463,30 +463,30 @@ void init()
 
 int main(int argc, char* argv[])
 {
+    std::cout << "Begin" << std::endl;
 	init();
-
 	std::cout << std::setprecision(16);
 	//Hoping itegrals between atoms
 	dmatrix hoping_integrals;
 	//Position of non-perturbed d-level with respect to the Fermi energy for all atoms
-	std::vector<double> E0;
+	dvector E0;
 	//Coulomb repulsion energy for all atoms
-	std::vector<double> U0;
+	dvector U0;
 	//initial number of d-electrons
-	std::vector<double> ElectronsNumber;
+	dvector ElectronsNumber;
 	//initial magnenic moments
-	std::vector<double> MagneticMoments;
+	dvector MagneticMoments;
 	//Theta angles for atoms
-	std::vector<double> thetaAngles;
+	dvector thetaAngles;
 	//Phi angle for atoms
-	std::vector<double> phiAngles;
+	dvector phiAngles;
 	//Magnetic field
 	double dh = 0;
 
 	try 
 	{
-		remove("saddle.txt");
-		std::ifstream hparams_file("hopingTrimer.txt");
+		remove("assets/saddle.txt");
+		std::ifstream hparams_file("assets/hopingTrimer.txt");
 		std::string buf;
 		while (std::getline(hparams_file, buf))
 		{
@@ -495,7 +495,7 @@ int main(int argc, char* argv[])
 			std::copy(std::istream_iterator<double>(line), std::istream_iterator<double>(), std::back_inserter(hoping_integrals.back()));
 		}
 		//Reading all necesary params from the text file
-		std::ifstream init_file("InitFile.txt");
+		std::ifstream init_file("assets/InitFile.txt");
 
 		GetParam(init_file, E0);
 		GetParam(init_file, U0);
