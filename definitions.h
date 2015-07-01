@@ -52,9 +52,9 @@ template <typename T> void formHamiltonian(T& H, const dvector& tAngle, const dv
     }
 }
 
-matrix<double> Green(const std::vector<double>& a, const std::vector<double>& b, int& ii0);
-double CN(const matrix<double>& t, const int& imax);
-double CalculateEnergy(const matrix<double>& t, const int& imax);
+matrix<double> Green(const std::vector<double>& a, const std::vector<double>& b);
+double CN(const matrix<double>& t);
+double CalculateEnergy(const matrix<double>& t);
 std::pair< dvector, dvector > ThreeDiag(const hermitian_matrix<std::complex<double>, upper>& H, int pIndex, int qIndex, const complex<double>& k, const complex<double>& m);
 
 #endif //DIPLOMA_DEFINITIONS_H

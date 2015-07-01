@@ -13,7 +13,7 @@
 
 namespace logging = boost::log;
 
-std::pair< dvector, dvector > ThreeDiag(const hermitian_matrix<std::complex<double>, upper>& H, int pIndex, int qIndex, const complex<double>& k, const complex<double>& m)
+std::pair< dvector, dvector > ThreeDiag(const hermitian_matrix<complex<double>, upper>& H, int pIndex, int qIndex, const complex<double>& k, const complex<double>& m)
 {
 	vector< std::complex<double> > y0(2 * L, 0);
 	vector< std::complex<double> > y1(2 * L, 0);
@@ -23,7 +23,7 @@ std::pair< dvector, dvector > ThreeDiag(const hermitian_matrix<std::complex<doub
 	//Diagonal coefficiencrs of matrix
 	vector< std::complex<double> > b(2 * L - 1, 0);
 	/*
-	   p              q
+	                                         p              q
 	   First basis vector. y0 = ( 0, ..., 0, k, 0, ...., 0, m, 0 ... ) 
 	   */
 	y0[pIndex] = k;
@@ -33,9 +33,9 @@ std::pair< dvector, dvector > ThreeDiag(const hermitian_matrix<std::complex<doub
 	vector< std::complex<double> > Hy = prod(H, y0);
 	//First coefficient a of threediagonalized matrix ( < y0,  (H * y0) > ) 
 	a[0] = inner_prod(conj(y0), Hy);
-	vector< std::complex<double> > buf = a[0] * y0;
+//	vector< std::complex<double> > buf = a[0] * y0;
 	//Caution: y is not actually a basis vector. Here it is a y1 * b
-	y = Hy - buf;
+	y = Hy - (a[0] * y0);
 	double x = norm_2(y);
 	int imax;
 	for (imax = 0; imax < (2 * L - 1) && x * x > /*1e-8*/ ::eps * 1e4; ++imax)
@@ -64,33 +64,22 @@ std::pair< dvector, dvector > ThreeDiag(const hermitian_matrix<std::complex<doub
 	return std::make_pair(aa, bb);
 }
 
-double f(const double& x, const double& a0, const double& b0, const std::vector<double>& p0, const std::vector<double>& q0, const int& ii0)
+double find_root(double a, double b, const double &a0, const double &b0, const vector<double> &p0,
+				 const vector<double> &q0, const int &ii0)
 {
-	double s = 0;
-	for (int i = 0; i <= ii0/*&& std::abs(p0[i]) >= 1E-15*/ /*0.00000001*/; ++i)
-		//        if( std::abs(p0[i]) >= 1E-15 )
-		s += p0[i] / (x - q0[i]);
-	return x - a0 - b0 * s;
-}
-
-double bisection(double a, double b, const double& a0, const double& b0, const std::vector<double>& p0, const std::vector<double>& q0, const int& ii0)
-{
-    if(f(a, a0, b0, p0, q0, ii0) * f(b, a0, b0, p0, q0, ii0) > 0)
-        throw "f(a) and f(b) should have diferent signs";
-
-    while (b - a > ::eps )
+	auto f = [&a0, &b0, &p0, &q0, &ii0](double x) -> double
 	{
-		double m = (a + b) / 2;
-		if( f(m, a0, b0, p0, q0, ii0) * f(b, a0, b0, p0, q0, ii0) <= 0 )
-			a = m;
-		else
-			b = m;
-	}
-	return a;
+		double s = 0;
+		for (int i = 0; i <= ii0; ++i)
+			s += p0[i] / (x - q0[i]);
+		return x - a0 - b0 * s;
+	};
 
+	auto result = bisect(f, a, b, [](double x, double y) -> bool { return y - x <= ::eps; });
+	return result.first;
 }
 
-void FR(const double& a, const double& b, matrix<double>& t, std::vector<double>& p0, std::vector<double>& q0, int& ii0)
+int FR(const double& a, const double& b, matrix<double>& t, vector<double>& p0, vector<double>& q0, const int& ii0)
 {
 
 	double a0 = a;
@@ -105,8 +94,7 @@ void FR(const double& a, const double& b, matrix<double>& t, std::vector<double>
 	{
 		t(0, 0) = 1;
 		t(1, 0) = a;
-		ii0 = 0;
-		return;
+		return 0;
 	}
 
 	p0[0] = t(0, firstInfinitesimal);
@@ -128,64 +116,58 @@ void FR(const double& a, const double& b, matrix<double>& t, std::vector<double>
 		}
 	}
 
-	ii0 = j;
-
 	double leftBound = q0[0] - 1e4;
-	double rightBound = q0[ii0] + 1e4;
+	double rightBound = q0[j] + 1e4;
 
-	z[0] = bisection( leftBound, q0[0] - ::eps * 10, a0, b0, p0, q0, ii0);
+	z[0] = find_root(leftBound, q0[0] - ::eps * 10, a0, b0, p0, q0, j);
 
-	for (int i = 0; i < ii0; ++i)
-		z[i + 1] = bisection(q0[i] + ::eps * 10, q0[i + 1] - ::eps * 10, a0, b0, p0, q0, ii0);
-	z[ii0 + 1] = bisection(q0[ii0] + ::eps * 10, rightBound, a0, b0, p0, q0, ii0);
+	for (int i = 0; i < j; ++i)
+		z[i + 1] = find_root(q0[i] + ::eps * 10, q0[i + 1] - ::eps * 10, a0, b0, p0, q0, j);
+	z[j + 1] = find_root(q0[j] + ::eps * 10, rightBound, a0, b0, p0, q0, j);
 
-	for (int i = 0; i <= ii0 + 1; ++i)
+	for (int i = 0; i <= j + 1; ++i)
 	{
 		double pTerm = 1;
 		double pDenom = 1;
-		for (int j = 0; j <= ii0; ++j)
+		for (int p = 0; p <= j; ++p)
 		{
-			pTerm *= z[i] - q0[j];
-			if (i != j)
-				pDenom *= z[i] - z[j];
+			pTerm *= z[i] - q0[p];
+			if (i != p)
+				pDenom *= z[i] - z[p];
 		}
-		if (i != ii0 + 1)
-			pDenom *= z[i] - z[ii0 + 1];
+		if (i != j + 1)
+			pDenom *= z[i] - z[j + 1];
 		t(0, i) = pTerm / pDenom;
 		t(1, i) = z[i];
-	}    
-	++ii0;   
+	}
+	return j + 1;
 }
 
 
 //Calculates the coefficients P and Q of the Green`s function`s matrix element represented by a fraction
 //"a" and "b" are the diagonal and subdiagonal elemnts of the hamiltonian
-matrix<double> Green(const std::vector<double>& a, const std::vector<double>& b, int& ii0)
+matrix<double> Green(const std::vector<double>& a, const std::vector<double>& b)
 {
-	int imax = a.size() - 1;
-	matrix<double> t(2, 2 * L);
-	std::vector<double> p0(2 * L, 0);
-	std::vector<double> q0(2 * L, 0);
+	matrix<double> t(2, 2 * L, 0);
+	vector<double> p0(2 * L, 0);
+	vector<double> q0(2 * L, 0);
 
-	for (int i = 0; i < 2 * L; ++i)
-		t(1, i) = t(0, i) = 0;
 	t(0, 0) = 1;
-	//t(1,0) = a[imax];		
 	t(1, 0) = a.back();
 
 	int ii00 = 0;
-	for (int i = imax - 1; i >= 0; --i)
-		FR(a[i], b[i], t, p0, q0, ii00);
-	ii0 = ii00;
+	for (int i = a.size() - 2; i >= 0; --i)
+		ii00 = FR(a[i], b[i], t, p0, q0, ii00);
+	t.resize(2, ii00 + 1);
 	return t;
 }
 
 //Carry out an integration of the density matrix, which is the number of d-electrons, if a diagonal element is considered
-double CN(const matrix<double>& t, const int& imax)
+double CN(const matrix<double>& t)
 {
 	double s1 = 0;
 	double s2 = 0;
-	for (int i = 0; i <= imax; ++i)
+	for (int i = 0; i < t.size2(); ++i)
 	{
 		s1 += t(0, i);
 		s2 += t(0, i) * std::atan(t(1, i));
@@ -195,13 +177,13 @@ double CN(const matrix<double>& t, const int& imax)
 	return 0.5 - s2 * 0.318309886183790671;
 }
 
-double CalculateEnergy(const matrix<double>& t, const int& imax)
+double CalculateEnergy(const matrix<double>& t)
 {
 	double s1 = 0;
 	double s2 = 0;
 	double s3 = 0;
 
-	for (int i = 0; i <= imax; ++i)
+	for (int i = 0; i < t.size2(); ++i)
 	{
 		double PQ = t(0, i) * t(1, i);
 		s1 += PQ;
@@ -215,9 +197,9 @@ bool SConsist(int i, const dvector& tAngle, const dvector& pAngle, dvector& M, d
 {
 	double magneticField = 0;
 	//Saving magnetic moments for each atom
-	dvector M1(M);
+	double m_new = M[i];
 	//Saving number of d-electrons on each atom
-	dvector N1(N);
+	double n_new = N[i];
 	//Hamiltonian
 	hermitian_matrix< complex<double>, upper> H(2 * L, 2 * L);
 	//The matrix of P and Q coefficients of the fraction that represents green`s function`s matrix element on i-th atom
@@ -228,50 +210,46 @@ bool SConsist(int i, const dvector& tAngle, const dvector& pAngle, dvector& M, d
 	{ 
 		++itr;
 		//Copy new values of the number d-electrons and magnetic moments and proceed the process 
-		N[i] = N1[i];
-		M[i] = M1[i];
+		N[i] = n_new;
+		M[i] = m_new;
 
 		H.clear(); greenFraction.clear();
 
 		formHamiltonian(H, tAngle, pAngle, N, M, E0, U0, hopingIntegrals, magneticField); 
 
-		std::pair< dvector, dvector > cofficients = ThreeDiag(H, i, i, complex<double>(1, 0), complex<double>(1, 0));
+		auto green_matrix_element = [&H](int index1, int index2, complex<double> vector1, complex<double> vector2) -> matrix<double>
+		{
+			auto cofficients = ThreeDiag(H, index1, index2, vector1, vector2);
+			return Green(cofficients.first, cofficients.second);
+		};
 
-		int ii0 = 0;
-		greenFraction = Green(cofficients.first, cofficients.second, ii0);
+		greenFraction = green_matrix_element(i, i, complex<double>(1), complex<double>(1));
+		double Nu = CN(greenFraction);
+		double Eu = CalculateEnergy(greenFraction);
 
-		double Nu = CN(greenFraction, ii0);
-		double Eu = CalculateEnergy(greenFraction, cofficients.first.size() - 1);
+		greenFraction = green_matrix_element(i + L, i + L, complex<double>(1), complex<double>(1));
+		double Nd = CN(greenFraction);
+		double Ed = CalculateEnergy(greenFraction);
 
-		cofficients = ThreeDiag(H, i + L, i + L, complex<double>(1, 0), complex<double>(1, 0));
-		greenFraction = Green(cofficients.first, cofficients.second, ii0);
+		greenFraction = green_matrix_element(i, i + L, complex<double>(1), complex<double>(1));
+		double SFp = CN(greenFraction);
 
-		double Nd = CN(greenFraction, ii0);
-		double Ed = CalculateEnergy(greenFraction, cofficients.first.size() - 1);
+		greenFraction = green_matrix_element(i, i + L, complex<double>(1), complex<double>(-1));
+		double SFn = CN(greenFraction);
 
-		cofficients = ThreeDiag(H, i, i + L, complex<double>(1, 0), complex<double>(1, 0)); 
-		greenFraction = Green(cofficients.first, cofficients.second, ii0);
-		double SFp = CN(greenFraction, ii0);
+		greenFraction = green_matrix_element(i, i + L, complex<double>(0, 1), complex<double>(1));
+		double AFp = CN(greenFraction);
 
-		cofficients = ThreeDiag(H, i, i + L, complex<double>(1, 0), complex<double>(-1, 0));
-		greenFraction = Green(cofficients.first, cofficients.second, ii0);
-		double SFn = CN(greenFraction, ii0);
+		greenFraction = green_matrix_element(i, i + L, complex<double>(0, 1), complex<double>(-1));
+		double AFn = CN(greenFraction);
 
-		cofficients = ThreeDiag(H, i, i + L, complex<double>(0, 1), complex<double>(1, 0));
-		greenFraction = Green(cofficients.first, cofficients.second, ii0);
-		double AFp = CN(greenFraction, ii0);
-
-		cofficients = ThreeDiag(H, i, i + L, complex<double>(0, 1), complex<double>(-1, 0));
-		greenFraction = Green(cofficients.first, cofficients.second, ii0);
-		double AFn = CN(greenFraction, ii0);
-
-		N1[i] = Nu + Nd;
-		M1[i] = (Nu - Nd) * cos(tAngle[i]) - ((SFp - SFn) * cos(pAngle[i]) - (AFp - AFn) * sin(pAngle[i])) * sin(tAngle[i]);
-		E[i] = Eu + Ed - U0[i] * ( N1[i] * N1[i] - M1[i] * M1[i] ) * 0.25 ;
+		n_new = Nu + Nd;
+		m_new = (Nu - Nd) * cos(tAngle[i]) - ((SFp - SFn) * cos(pAngle[i]) - (AFp - AFn) * sin(pAngle[i])) * sin(tAngle[i]);
+		E[i] = Eu + Ed - U0[i] * ( n_new * n_new - m_new * m_new ) * 0.25 ;
 	}
-	while ( (std::abs(M1[i] - M[i]) > delta || std::abs(N1[i] - N[i]) > delta)  && itr < maxIterCount ) ;
-	N[i] = N1[i];
-	M[i] = M1[i];
+	while ( (std::abs(m_new - M[i]) > delta || std::abs(n_new - N[i]) > delta)  && itr < maxIterCount ) ;
+	N[i] = n_new;
+	M[i] = m_new;
 
 	if( itr == maxIterCount )
 		throw "#Infinite selfconsist procedure.";
@@ -456,7 +434,7 @@ void init()
 {
 	logging::core::get()->set_filter
 		(
-		 logging::trivial::severity >= logging::trivial::info
+		 logging::trivial::severity >= logging::trivial::debug
 		);
 }
 

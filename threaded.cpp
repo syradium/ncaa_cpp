@@ -35,35 +35,34 @@ void SConsistThreaded(int i, std::pair< dvector, dvector >& result, const std::p
 
         std::pair< dvector, dvector > cofficients = ThreeDiag(H, i, i, complex<double>(1, 0), complex<double>(1, 0));
 
-        int ii0 = 0;
-        greenFraction = Green(cofficients.first, cofficients.second, ii0);
-        double Nu = CN(greenFraction, cofficients.first.size() - 1);
-        double Eu = CalculateEnergy(greenFraction, cofficients.first.size() - 1);
+        greenFraction = Green(cofficients.first, cofficients.second);
+        double Nu = CN(greenFraction);
+        double Eu = CalculateEnergy(greenFraction);
 
         cofficients = ThreeDiag(H, i + L, i + L, complex<double>(1, 0), complex<double>(1, 0));
-        greenFraction = Green(cofficients.first, cofficients.second, ii0);
+        greenFraction = Green(cofficients.first, cofficients.second);
 
-        double Nd = CN(greenFraction, cofficients.first.size() - 1);
-        double Ed = CalculateEnergy(greenFraction, cofficients.first.size() - 1);
+        double Nd = CN(greenFraction);
+        double Ed = CalculateEnergy(greenFraction);
 
         cofficients = ThreeDiag(H, i, i + L, complex<double>(1, 0), complex<double>(1, 0));
 
-        greenFraction = Green(cofficients.first, cofficients.second, ii0);
+        greenFraction = Green(cofficients.first, cofficients.second);
 
-        double SFp = CN(greenFraction, cofficients.first.size() - 1);
+        double SFp = CN(greenFraction);
 
         cofficients = ThreeDiag(H, i, i + L, complex<double>(1, 0), complex<double>(-1, 0));
-        greenFraction = Green(cofficients.first, cofficients.second, ii0);
+        greenFraction = Green(cofficients.first, cofficients.second);
 
-        double SFn = CN(greenFraction, cofficients.first.size() - 1);
+        double SFn = CN(greenFraction);
 
         cofficients = ThreeDiag(H, i, i + L, complex<double>(0, 1), complex<double>(1, 0));
-        greenFraction = Green(cofficients.first, cofficients.second, ii0);
-        double AFp = CN(greenFraction, cofficients.first.size() - 1);
+        greenFraction = Green(cofficients.first, cofficients.second);
+        double AFp = CN(greenFraction);
 
         cofficients = ThreeDiag(H, i, i + L, complex<double>(0, 1), complex<double>(-1, 0));
-        greenFraction = Green(cofficients.first, cofficients.second, ii0);
-        double AFn = CN(greenFraction, cofficients.first.size() - 1);
+        greenFraction = Green(cofficients.first, cofficients.second);
+        double AFn = CN(greenFraction);
 
         N1[i] = Nu + Nd;
         M1[i] = (Nu - Nd) * cos(angles.first[i]) - ((SFp - SFn) * cos(angles.second[i]) - (AFp - AFn) * sin(angles.second[i])) * sin(angles.first[i]);
