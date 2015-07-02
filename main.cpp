@@ -53,13 +53,10 @@ std::pair< dvector, dvector > ThreeDiag(const hermitian_matrix<complex<double>, 
 	std::vector< double > bb;
 
 	BOOST_FOREACH(std::complex<double> i, a)
-	{
 		aa.push_back(i.real());
-	}
+
 	BOOST_FOREACH(std::complex<double> i, b)
-	{
 		bb.push_back(i.real() * i.real() );
-	}
 	aa.resize(imax + 1);
 	return std::make_pair(aa, bb);
 }
@@ -146,7 +143,7 @@ int FR(const double& a, const double& b, matrix<double>& t, vector<double>& p0, 
 
 //Calculates the coefficients P and Q of the Green`s function`s matrix element represented by a fraction
 //"a" and "b" are the diagonal and subdiagonal elemnts of the hamiltonian
-matrix<double> Green(const std::vector<double>& a, const std::vector<double>& b)
+matrix<double> Green(const dvector& a, const dvector& b)
 {
 	matrix<double> t(2, 2 * L, 0);
 	vector<double> p0(2 * L, 0);
@@ -173,7 +170,6 @@ double CN(const matrix<double>& t)
 		s2 += t(0, i) * std::atan(t(1, i));
 	}
 
-	//    std::cout << "sum(s1): " << s1 << std::endl;
 	return 0.5 - s2 * 0.318309886183790671;
 }
 
@@ -259,40 +255,39 @@ bool SConsist(int i, const dvector& tAngle, const dvector& pAngle, dvector& M, d
 dmatrix buildEnergySurface(dvector thetaAngles, dvector phiAngles, const dvector& magneticMoments, const dvector& electronsNumber,
 		const dvector& E0, const dvector& U0, const dmatrix& hopingIntegrals, const bool& threaded )
 {
-	std::vector< std::vector<double> > results;
-	int stepNumber          =  99;
-	double theta2Begin      = -0.0 * boost::math::constants::pi<double>();
+	std::vector<dvector> results;
+	int stepNumber          =  15;
+	double theta2Begin      = -1.0 * boost::math::constants::pi<double>();
 	double theta2End        =  2.0 * boost::math::constants::pi<double>();
-	double theta3Begin      = -0.0 * boost::math::constants::pi<double>();
+	double theta3Begin      = -1.0 * boost::math::constants::pi<double>();
 	double theta3End        =  2.0 * boost::math::constants::pi<double>();
 
 	BOOST_LOG_TRIVIAL(info) << "Building energy surface with " << stepNumber << " steps";
-	for( int th2 = 0; th2 < stepNumber; ++th2 )
+	for(double th2: linspace(theta2Begin, theta2End, stepNumber))
 	{
 		BOOST_LOG_TRIVIAL(info) << "Step th2 " << th2 + 1 << " of " << stepNumber;
 
-		std::vector<double> bufResults;
+		dvector bufResults;
 		thetaAngles[0] = 0;
-		thetaAngles[1] = theta2Begin + (theta2End - theta2Begin) * th2 / (stepNumber - 1);
+		thetaAngles[1] = th2;
 
-		for( int th3 = 0; th3 < stepNumber; ++th3 )
+		for(double th3: linspace(theta3Begin, theta3End, stepNumber))
 		{
 			try
 			{
 				//Energy
 				dvector Energy(L, 0);
-
-				std::vector<double> N(electronsNumber);
+				//initial electon number
+				dvector N(electronsNumber);
 				//initial magnenic moments
-				std::vector<double> M(magneticMoments);
+				dvector M(magneticMoments);
 
-				thetaAngles[2] = theta3Begin + (theta3End - theta3Begin) * th3 / (stepNumber - 1);
+				thetaAngles[2] = th3;
 
 				bool isConsist = true;
 				unsigned int iterations = 0;
 
 				BOOST_LOG_TRIVIAL(debug) << "#" << thetaAngles[1] << " " << thetaAngles[2];
-
 				if( !threaded )
 				{     
 					do
