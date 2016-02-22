@@ -15,6 +15,18 @@
 
 void EnergySurfaceTask(const dmatrix &results);
 
+struct SurfaceParams2D {
+    SurfaceParams2D(double theta2Begin, double theta2End, double theta3Begin, double theta3End, int stepNumber)
+            : theta2Begin(theta2Begin), theta2End(theta2End), theta3Begin(theta3Begin), theta3End(theta3End),
+              stepNumber(stepNumber) { }
+
+    double theta2Begin;
+    double theta2End;
+    double theta3Begin;
+    double theta3End;
+    int stepNumber;
+};
+
 std::pair<dvector, dvector> ThreeDiag(const hermitian_matrix<complex<double>, upper> &H, int pIndex, int qIndex,
                                       const complex<double> &k, const complex<double> &m) {
     vector<std::complex<double> > y0(2 * L, 0);
@@ -240,25 +252,20 @@ bool SConsist(int i, const dvector &tAngle, const dvector &pAngle, dvector &M, d
     return itr == 1;
 }
 
-dmatrix buildEnergySurface(dvector thetaAngles, dvector phiAngles, const dvector &magneticMoments,
-                           const dvector &electronsNumber,
-                           const dvector &E0, const dvector &U0, const dmatrix &hopingIntegrals, const bool &threaded) {
-    std::vector<dvector> results;
-    int stepNumber = 50;
-    double theta2Begin = -1.0 * boost::math::constants::pi<double>();
-    double theta2End = 2.0 * boost::math::constants::pi<double>();
-    double theta3Begin = -1.0 * boost::math::constants::pi<double>();
-    double theta3End = 2.0 * boost::math::constants::pi<double>();
 
-    std::cout << "Building energy surface with " << stepNumber << " steps\n";
-    for (double th2: linspace(theta2Begin, theta2End, stepNumber)) {
-        std::cout << "Step th2 " << th2 + 1 << " of " << stepNumber << std::endl;
+dmatrix buildEnergySurface(dvector thetaAngles, dvector phiAngles, const dvector &magneticMoments, const dvector &electronsNumber,
+                           const dvector &E0, const dvector &U0, const dmatrix &hopingIntegrals, const bool &threaded, const SurfaceParams2D &params) {
+    std::vector<dvector> results;
+
+    std::cout << "Building energy surface with " << params.stepNumber << " steps\n";
+    for (double th2: linspace(params.theta2Begin, params.theta2End, params.stepNumber)) {
+        std::cout << "Step th2 " << th2 + 1 << " of " << params.stepNumber << std::endl;
 
         dvector bufResults;
         thetaAngles[0] = 0;
         thetaAngles[1] = th2;
 
-        for (double th3: linspace(theta3Begin, theta3End, stepNumber)) {
+        for (double th3: linspace(params.theta3Begin, params.theta3End, params.stepNumber)) {
             try {
                 //Energy
                 dvector Energy(L, 0);
@@ -347,10 +354,8 @@ dmatrix buildEnergySurface(dvector thetaAngles, dvector phiAngles, const dvector
     return results;
 }
 
-void BuildSelfconsistentSolution(const int &imageNum, const mat &angles, dmatrix &magneticMoments,
-                                 dmatrix &electronsNumber,
-                                 const dvector &E0, const dvector &U0, const dmatrix &hopingIntegrals,
-                                 dmatrix &Gradients, dvector &Energies) {
+void BuildSelfconsistentSolution(const int &imageNum, const mat &angles, dmatrix &magneticMoments, dmatrix &electronsNumber,
+                                 const dvector &E0, const dvector &U0, const dmatrix &hopingIntegrals, dmatrix &Gradients, dvector &Energies) {
     bool isConsist = false;
     unsigned int iterations = 0;
 
@@ -378,9 +383,7 @@ void BuildSelfconsistentSolution(const int &imageNum, const mat &angles, dmatrix
     Energies[imageNum] = std::accumulate(Energy.begin(), Energy.end(), 0.0);
 }
 
-void buildSelfCSolution(dvector &thetaAngles, const dvector &phiAngles, dvector &magneticMoments,
-                        dvector &electronsNumber,
-                        const dvector &E0, const dvector &U0, const dmatrix &hopingIntegrals, dvector &Energy) {
+void buildSelfCSolution(dvector &thetaAngles, const dvector &phiAngles, dvector &magneticMoments, dvector &electronsNumber, const dvector &E0, const dvector &U0, const dmatrix &hopingIntegrals, dvector &Energy) {
     bool isConsist;
     unsigned int iterations = 0;
 
@@ -429,8 +432,14 @@ int main(int argc, char *argv[]) {
     try {
         Init(hoping_integrals, E0, U0, ElectronsNumber, MagneticMoments, thetaAngles, phiAngles);
 
-        dmatrix results = buildEnergySurface(thetaAngles, phiAngles, MagneticMoments, ElectronsNumber, E0, U0,
-                                             hoping_integrals, false);
+        SurfaceParams2D surface_params(
+                -1.0 * boost::math::constants::pi<double>(),
+                2.0 * boost::math::constants::pi<double>(),
+                -1.0 * boost::math::constants::pi<double>(),
+                2.0 * boost::math::constants::pi<double>(),
+                50
+        );
+        dmatrix results = buildEnergySurface(thetaAngles, phiAngles, MagneticMoments, ElectronsNumber, E0, U0, hoping_integrals, false, surface_params);
         EnergySurfaceTask(results);
 
         return 0;
@@ -442,20 +451,16 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i <= 0; ++i) {
             double buf = i * 0.05 + 0.6;
             hoping_integrals[0][1] = hoping_integrals[0][2] = buf;
-            std::vector<dvector> dots = findMinimaVelocitiesThreaded(MagneticMoments, ElectronsNumber, E0, U0,
-                                                                     hoping_integrals);
+            std::vector<dvector> dots = findMinimaVelocitiesThreaded(MagneticMoments, ElectronsNumber, E0, U0, hoping_integrals);
             std::cout << hoping_integrals[0][1] << " " << dots[1][1] << "\n";
         }
 
 
         // MEP
         std::cout << "Building MEP\n";
-        buildMEP(thetaAngles, phiAngles, MagneticMoments, ElectronsNumber, E0, U0, hoping_integrals, 15, dots[1],
-                 dots[2], "second");
-        buildMEP(thetaAngles, phiAngles, MagneticMoments, ElectronsNumber, E0, U0, hoping_integrals, 15, dots[0],
-                 dots[2], "first");
-        buildMEP(thetaAngles, phiAngles, MagneticMoments, ElectronsNumber, E0, U0, hoping_integrals, 15, dots[2],
-                 dots[3], "third");
+        buildMEP(thetaAngles, phiAngles, MagneticMoments, ElectronsNumber, E0, U0, hoping_integrals, 15, dots[1], dots[2], "second");
+        buildMEP(thetaAngles, phiAngles, MagneticMoments, ElectronsNumber, E0, U0, hoping_integrals, 15, dots[0], dots[2], "first");
+        buildMEP(thetaAngles, phiAngles, MagneticMoments, ElectronsNumber, E0, U0, hoping_integrals, 15, dots[2], dots[3], "third");
     }
 
 
