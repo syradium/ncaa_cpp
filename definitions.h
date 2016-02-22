@@ -30,6 +30,7 @@
 #include "constants.h"
 
 using std::complex;
+using std::cout;
 using std::numeric_limits;
 using namespace boost::numeric::ublas;
 using namespace boost::math::tools;

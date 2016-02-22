@@ -32,10 +32,10 @@ void buildMEP(
 std::vector<std::vector<double> > findMinima(const std::vector<double> & magneticMoments, const std::vector<double> & electronsNumber,
 		const std::vector<double> & E0, const std::vector<double> & U0, const std::vector<std::vector<double>> & hopingIntegrals);
 
-std::vector<std::vector<double> > findMinimaVelocities(const std::vector<double> & magneticMoments, const std::vector<double> & electronsNumber,
-		const std::vector<double> & E0, const std::vector<double> & U0, const std::vector<std::vector<double>> & hopingIntegrals);
+std::vector<std::vector<double> > findMinimaVelocities(const dvector& magneticMoments, const dvector& electronsNumber,
+		const dvector& E0, const dvector & U0, const std::vector<dvector> & hopingIntegrals);
 
-std::vector<std::vector<double> > findMinimaVelocitiesThreaded(const std::vector<double> & magneticMoments, const std::vector<double> & electronsNumber,
-		const std::vector<double> & E0, const std::vector<double> & U0, const std::vector<std::vector<double>> & hopingIntegrals);
+std::vector<std::vector<double> > findMinimaVelocitiesThreaded(const dvector& magneticMoments, const dvector& electronsNumber,
+		const dvector& E0, const dvector& U0, const std::vector<dvector> & hopingIntegrals);
 
 #endif //DIPLOMA_MEP_H
