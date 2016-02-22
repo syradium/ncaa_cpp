@@ -256,7 +256,7 @@ dmatrix buildEnergySurface(dvector thetaAngles, dvector phiAngles, const dvector
 		const dvector& E0, const dvector& U0, const dmatrix& hopingIntegrals, const bool& threaded )
 {
 	std::vector<dvector> results;
-	int stepNumber          =  15;
+	int stepNumber          =  50;
 	double theta2Begin      = -1.0 * boost::math::constants::pi<double>();
 	double theta2End        =  2.0 * boost::math::constants::pi<double>();
 	double theta3Begin      = -1.0 * boost::math::constants::pi<double>();
@@ -427,10 +427,7 @@ void GetParam(std::ifstream& file, std::vector<double>& arr)
 
 void init()
 {
-	logging::core::get()->set_filter
-		(
-		 logging::trivial::severity >= logging::trivial::debug
-		);
+	logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
 }
 
 
