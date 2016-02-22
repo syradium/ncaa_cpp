@@ -58,4 +58,10 @@ double CN(const matrix<double>& t);
 double CalculateEnergy(const matrix<double>& t);
 std::pair< dvector, dvector > ThreeDiag(const hermitian_matrix<std::complex<double>, upper>& H, int pIndex, int qIndex, const complex<double>& k, const complex<double>& m);
 
+void BuildSelfconsistentSolution(const int &imageNum, const mat &angles, dmatrix &magneticMoments, dmatrix &electronsNumber,
+                                 const dvector &E0, const dvector &U0, const dmatrix &hopingIntegrals, dmatrix &Gradients, dvector &Energies);
+
+bool SConsist(int i, const dvector &tAngle, const dvector &pAngle, dvector &M, dvector &N, const dvector &E0,
+              const dvector &U0, const dmatrix &hopingIntegrals, dvector &E);
+
 #endif //DIPLOMA_DEFINITIONS_H

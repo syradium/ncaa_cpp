@@ -13,6 +13,8 @@
 #include "threaded.h"
 
 
+bool interrupt = false;
+
 void EnergySurfaceTask(const dmatrix &results);
 
 struct SurfaceParams2D {
@@ -188,6 +190,7 @@ double CalculateEnergy(const matrix<double> &t) {
     return 0.5 * s1 - (s2 - 0.5 * s3) * 0.318309886183790671;
 }
 
+
 bool SConsist(int i, const dvector &tAngle, const dvector &pAngle, dvector &M, dvector &N, const dvector &E0,
               const dvector &U0, const dmatrix &hopingIntegrals, dvector &E) {
     double magneticField = 0;
@@ -353,6 +356,7 @@ dmatrix buildEnergySurface(dvector thetaAngles, dvector phiAngles, const dvector
 
     return results;
 }
+
 
 void BuildSelfconsistentSolution(const int &imageNum, const mat &angles, dmatrix &magneticMoments, dmatrix &electronsNumber,
                                  const dvector &E0, const dvector &U0, const dmatrix &hopingIntegrals, dmatrix &Gradients, dvector &Energies) {

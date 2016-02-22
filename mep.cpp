@@ -3,8 +3,10 @@
 //
 
 #include "mep.h"
-#ifndef DIPLOMA_MEP_H
-#define DIPLOMA_MEP_H
+
+
+extern bool interrupt;
+
 
 std::vector<double> pathTangent(const int& imageNum, const arma::mat& path, const std::vector<double> & energies)
 {
@@ -148,8 +150,8 @@ void buildMEP(
 		}
 	}
 
-	buildSelfconsistentSolution(0                 , path, pathM, pathN, E0, U0,  hopingIntegrals, gradients, energies);
-	buildSelfconsistentSolution(numberOfImages - 1, path, pathM, pathN, E0, U0,  hopingIntegrals, gradients, energies);
+    BuildSelfconsistentSolution(0, path, pathM, pathN, E0, U0, hopingIntegrals, gradients, energies);
+    BuildSelfconsistentSolution(numberOfImages - 1, path, pathM, pathN, E0, U0, hopingIntegrals, gradients, energies);
 
 	int maxEnergyPoint = 1;
 	unsigned int iteration = 0;
@@ -162,7 +164,7 @@ void buildMEP(
 
 		for(int i = 1; i < numberOfImages - 1; ++i)
 		{
-			buildSelfconsistentSolution(i, path, pathM, pathN, E0, U0,  hopingIntegrals, gradients, energies);
+            BuildSelfconsistentSolution(i, path, pathM, pathN, E0, U0, hopingIntegrals, gradients, energies);
 			if( energies[maxEnergyPoint] < energies[i])
 				maxEnergyPoint = i;
 		}
@@ -425,7 +427,7 @@ std::vector<std::vector<double> > findMinimaVelocitiesThreaded(const std::vector
 		std::vector<double> M;
 		std::vector<double> Energy;
 
-		BOOST_LOG_TRIVIAL(info) << "Optimizing dot #" << i;
+        cout << "Optimizing dot #" << i << std::endl;
 		do
 		{
 			N = electronsNumber;
@@ -502,5 +504,3 @@ std::vector<std::vector<double> > findMinimaVelocitiesThreaded(const std::vector
 	}
 	return dots;
 }
-
-#endif //DIPLOMA_MEP_H

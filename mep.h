@@ -15,6 +15,8 @@
 #include <boost/math/constants/constants.hpp>
 #include "constants.h"
 #include "gradient.h"
+#include "definitions.h"
+#include "threaded.h"
 
 void recordPath( const arma::mat& path, const char* fileName);
 
